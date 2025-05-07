@@ -1,4 +1,4 @@
-let Parallel = require('paralleljs');
+const Parallel = require('paralleljs');
 
 function merge(left, right) {
   let result = [];
@@ -16,29 +16,29 @@ function merge(left, right) {
   return result.concat(left.slice(i)).concat(right.slice(j));
 }
 
-// Helper function for recursive parallel merge sort
+function mergeSort(arr) {
+  if (arr.length <= 1) return arr;
+
+  const mid = Math.floor(arr.length / 2);
+  const left = mergeSort(arr.slice(0, mid));
+  const right = mergeSort(arr.slice(mid));
+
+  return merge(left, right);
+}
+
 function parallelMergeSort(arr) {
   if (arr.length <= 1) {
     return Promise.resolve(arr);
   }
 
-  let mid = Math.floor(arr.length / 2);
-  let left = arr.slice(0, mid);
-  let right = arr.slice(mid);
+  const mid = Math.floor(arr.length / 2);
+  const left = arr.slice(0, mid);
+  const right = arr.slice(mid);
 
-  // Run recursive sort in parallel using Parallel.js
-  let leftPromise = new Parallel(left).require(parallelMergeSort, merge).spawn(function(data) {
-    return parallelMergeSort(data);
-  });
+  const leftSort = new Parallel(left).require(merge, mergeSort).spawn(subArr => mergeSort(subArr));
 
-  let rightPromise = new Parallel(right).require(parallelMergeSort, merge).spawn(function(data) {
-    return parallelMergeSort(data);
-  });
+  const rightSort = new Parallel(right).require(merge, mergeSort).spawn(subArr => mergeSort(subArr));
 
-  return Promise.all([leftPromise, rightPromise])
-    .then(([sortedLeft, sortedRight]) => {
-      return merge(sortedLeft, sortedRight);
-    });
+  return Promise.all([leftSort, rightSort])
+    .then(([leftSorted, rightSorted]) => merge(leftSorted, rightSorted));
 }
-
-global.parallelMergeSort = parallelMergeSort;
